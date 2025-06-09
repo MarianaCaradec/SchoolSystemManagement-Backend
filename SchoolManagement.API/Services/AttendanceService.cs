@@ -32,6 +32,8 @@ namespace SchoolManagement.API.Services
                  Present = a.Present,
                  StudentId = a.Student != null ? a.StudentId : null,
                  TeacherId = userRole != UserRole.Student && a.Teacher != null ? a.TeacherId : null,
+                 StudentUserId = a.Student != null ? a.Student.UserId : null,
+                 TeacherUserId = a.Teacher != null ? a.Teacher.UserId : null
             }).ToListAsync();
         }
 
@@ -112,7 +114,9 @@ namespace SchoolManagement.API.Services
                 Date = attendanceToBeCreated.Date,
                 Present = attendanceToBeCreated.Present,
                 StudentId = hasStudent ? attendanceToBeCreated.StudentId : null,
-                TeacherId = hasTeacher ? attendanceToBeCreated.TeacherId : null
+                TeacherId = hasTeacher ? attendanceToBeCreated.TeacherId : null,
+                Student = hasStudent ? await _context.Students.FindAsync(attendanceToBeCreated.StudentId) : null,
+                Teacher = hasTeacher ? await _context.Teachers.FindAsync(attendanceToBeCreated.TeacherId) : null
             };
 
             if (hasStudent)
@@ -157,7 +161,9 @@ namespace SchoolManagement.API.Services
                 Date = createdAttendanceToBeSaved.Date,
                 Present = createdAttendanceToBeSaved.Present,
                 StudentId = createdAttendanceToBeSaved.StudentId,
-                TeacherId = createdAttendanceToBeSaved.TeacherId
+                TeacherId = createdAttendanceToBeSaved.TeacherId,
+                StudentUserId = hasStudent ? (await _context.Students.FindAsync(attendanceToBeCreated.StudentId)).UserId : null,
+                TeacherUserId = hasTeacher ? (await _context.Teachers.FindAsync(attendanceToBeCreated.TeacherId)).UserId : null
             };
         }
 

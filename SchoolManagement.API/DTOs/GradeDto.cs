@@ -7,5 +7,6 @@
         public DateOnly Date { get; set; }
         public int StudentId { get; set; }
         public int SubjectId { get; set; }
+        public string SubjectName { get; set; }
     }
 }

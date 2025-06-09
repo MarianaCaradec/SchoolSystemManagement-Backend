@@ -39,6 +39,7 @@ namespace SchoolManagement.API.Services
                 .ThenInclude(c => c.Teachers)
                 .Include(st => st.Attendances)
                 .Include(st => st.Grades)
+                .ThenInclude(g => g.Subject)
                 .FirstOrDefaultAsync(st => st.Id == id);
 
             if (student == null) throw new KeyNotFoundException($"Student with ID {id} not found.");
@@ -61,7 +62,7 @@ namespace SchoolManagement.API.Services
                 BirthDate = student.BirthDate,
                 Address = student.Address,
                 MobileNumber = student.MobileNumber,
-                EmailRole = new AuthDto { Email = student.User.Email, Role = student.User.Role },
+                EmailRole = new AuthDto(student.User.Email, student.User.Role),
                 Class = new ClassStudentDto 
                 { 
                     Course = student.Class.Course, 
@@ -86,6 +87,7 @@ namespace SchoolManagement.API.Services
                     Value = g.Value,
                     Date = g.Date,
                     SubjectId = g.SubjectId,
+                    SubjectName = g.Subject.Title,
                 })
                 .ToList(),
             };

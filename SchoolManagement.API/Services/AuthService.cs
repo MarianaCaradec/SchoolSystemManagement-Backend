@@ -135,11 +135,7 @@ namespace SchoolManagement.API.Services
 
             string token = await GenerateTokenAsync(registeredUser);
 
-            AuthDto authUser = new AuthDto
-            {
-                Email = registeredUser.Email,
-                Role = registeredUser.Role,
-            };
+            AuthDto authUser = new AuthDto(registeredUser.Email, registeredUser.Role);
 
             return authUser;
         }

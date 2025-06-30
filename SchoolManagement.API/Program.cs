@@ -71,7 +71,7 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
-app.UseCors("AllowFrontend");
+app.UseCors("AllowAll");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

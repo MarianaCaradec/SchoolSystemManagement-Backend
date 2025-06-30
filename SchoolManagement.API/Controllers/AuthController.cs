@@ -42,7 +42,7 @@ namespace SchoolManagement.API.Controllers
         [HttpPost("Login")]
         public async Task<ActionResult<AuthDto>> Login([FromBody] AuthReqDto req)
         {
-            var loginResult = await _authService.LoginAsync(req.Email, req.Password, req.UserId);
+            LoginResultDto loginResult = await _authService.LoginAsync(req.Email, req.Password, req.UserId);
 
             var cookies = new CookieOptions
             {

@@ -117,7 +117,7 @@ namespace SchoolManagement.API.Services
             };
         } 
 
-        public async Task<AuthDto> LoginAsync(string email, string password, int userId)
+        public async Task<LoginResultDto> LoginAsync(string email, string password, int userId)
         {
             User registeredUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == email && u.Id == userId); ;
 
@@ -135,9 +135,14 @@ namespace SchoolManagement.API.Services
 
             string token = await GenerateTokenAsync(registeredUser);
 
-            AuthDto authUser = new AuthDto(registeredUser.Email, registeredUser.Role);
+            UserRole userRole = await _userService.GetUserRole(registeredUser.Id);
 
-            return authUser;
+            return new LoginResultDto
+            {
+                Email = registeredUser.Email,
+                Role = userRole,
+                Token = token
+            };
         }
     }
 }

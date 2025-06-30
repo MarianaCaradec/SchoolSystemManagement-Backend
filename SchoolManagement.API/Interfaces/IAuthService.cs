@@ -9,6 +9,6 @@ namespace SchoolManagement.API.Interfaces
 
         //public Task<string> AuthenticateAsync(string email, string password, int userId);
         Task<UserDto> RegisterAsync(Auth authUser, int? userId);
-        Task<AuthDto> LoginAsync(string email, string password, int userId);
+        Task<LoginResultDto> LoginAsync(string email, string password, int userId);
     }
 }

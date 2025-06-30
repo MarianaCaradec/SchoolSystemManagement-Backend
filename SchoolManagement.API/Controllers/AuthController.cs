@@ -40,9 +40,9 @@ namespace SchoolManagement.API.Controllers
         }
 
         [HttpPost("Login")]
-        public async Task<ActionResult<AuthDto>> Login([FromBody] AuthReq req)
+        public async Task<ActionResult<AuthDto>> Login([FromBody] AuthReqDto req)
         {
-            AuthDto token = await _authService.LoginAsync(req.Email, req.Password, req.UserId);
+            var loginResult = await _authService.LoginAsync(req.Email, req.Password, req.UserId);
 
             var cookies = new CookieOptions
             {
@@ -52,11 +52,9 @@ namespace SchoolManagement.API.Controllers
                 Expires = DateTime.UtcNow.AddMinutes(60)
             };
 
-            Response.Cookies.Append("AuthToken", token.ToString(), cookies);
+            Response.Cookies.Append("AuthToken", loginResult.Token, cookies);
 
-            UserDto user = await _userService.GetUserByEmailAsync(req.Email, req.UserId);
-
-            return Ok(new AuthDto(user.Email, user.Role));
+            return Ok(new AuthDto(loginResult.Email, loginResult.Role));
         }
 
         [HttpPost("LogOut")]

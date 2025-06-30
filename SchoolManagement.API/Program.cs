@@ -71,7 +71,7 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
-app.UseCors("AllowAll");
+app.UseCors("AllowFrontend");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -83,6 +83,17 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
+
+app.Use(async (context, next) =>
+{
+    var token = context.Request.Cookies["AuthToken"];
+    if (!string.IsNullOrEmpty(token))
+    {
+        context.Request.Headers.Authorization = $"Bearer {token}";
+    }
+
+    await next();
+});
 
 app.UseAuthorization();
 

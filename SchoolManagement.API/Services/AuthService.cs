@@ -27,8 +27,8 @@ namespace SchoolManagement.API.Services
 
             var claims = new[]
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-                new Claim(JwtRegisteredClaimNames.Sub, user.Email.ToString()),
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Email, user.Email.ToString()),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(ClaimTypes.Role, user.Role.ToString()),
                 new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
@@ -49,17 +49,17 @@ namespace SchoolManagement.API.Services
             return tokenHandler.WriteToken(token);
         }
 
-        public async Task<string> AuthenticateAsync(string email, string password, int userId)
-        {
-            User user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email && u.Id == userId);
+        //public async Task<string> AuthenticateAsync(string email, string password, int userId)
+        //{
+        //    User user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email && u.Id == userId);
 
-            if (user == null ||_passwordHasher.VerifyHashedPassword(user, user.Password, password) != PasswordVerificationResult.Success)
-            {
-                throw new UnauthorizedAccessException("Invalid credentials.");
-            }
+        //    if (user == null ||_passwordHasher.VerifyHashedPassword(user, user.Password, password) != PasswordVerificationResult.Success)
+        //    {
+        //        throw new UnauthorizedAccessException("Invalid credentials.");
+        //    }
 
-            return await GenerateTokenAsync(user);
-        }
+        //    return await GenerateTokenAsync(user);
+        //}
        
         public async Task<UserDto> RegisterAsync (Auth authUser, int? userId)
         {
@@ -117,9 +117,9 @@ namespace SchoolManagement.API.Services
             };
         } 
 
-        public async Task<AuthDto> LoginAsync(string email, string password)
+        public async Task<AuthDto> LoginAsync(string email, string password, int userId)
         {
-            User registeredUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            User registeredUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == email && u.Id == userId); ;
 
             if (registeredUser == null)
             {

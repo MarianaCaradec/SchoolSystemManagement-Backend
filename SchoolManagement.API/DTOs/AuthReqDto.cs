@@ -1,6 +1,6 @@
-﻿namespace SchoolManagement.API.Models
+﻿namespace SchoolManagement.API.DTOs
 {
-    public class AuthReq
+    public class AuthReqDto
     {
         public string Email { get; set; }
         public string Password { get; set; }

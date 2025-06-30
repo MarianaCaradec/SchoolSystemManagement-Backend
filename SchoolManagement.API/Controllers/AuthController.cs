@@ -57,6 +57,13 @@ namespace SchoolManagement.API.Controllers
             UserDto user = await _userService.GetUserByEmailAsync(req.Email, req.UserId);
 
             return Ok(new AuthDto(user.Email, user.Role));
-        }   
+        }
+
+        [HttpPost("LogOut")]
+        public IActionResult LogOut()
+        {
+            Response.Cookies.Delete("AuthToken");
+            return Ok();
+        }
     }
 }

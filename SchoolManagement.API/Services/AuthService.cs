@@ -13,12 +13,13 @@ using static SchoolManagement.API.Models.User;
 namespace SchoolManagement.API.Services
 {
     public class AuthService(IConfiguration configuration, SchoolSysDBContext context, 
-        IPasswordHasher<User> passwordHasher, IUserService userService) : IAuthService
+        IPasswordHasher<User> passwordHasher, IUserService userService, IHttpContextAccessor httpContextAccessor) : IAuthService
     {
         private readonly IConfiguration _configuration = configuration;
         private readonly SchoolSysDBContext _context = context;
         private readonly IPasswordHasher<User> _passwordHasher = passwordHasher;
         private readonly IUserService _userService = userService;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         public async Task<string> GenerateTokenAsync(User user)
         {
@@ -61,7 +62,7 @@ namespace SchoolManagement.API.Services
         //    return await GenerateTokenAsync(user);
         //}
        
-        public async Task<UserDto> RegisterAsync (Auth authUser, int? userId)
+        public async Task<UserDto> RegisterAsync (Auth authUser)
         {
             bool existingUser = await _context.Users.AnyAsync(u => u.Email == authUser.Email);
 
@@ -78,24 +79,30 @@ namespace SchoolManagement.API.Services
                     $" Allowed roles are: Admin and Teacher for an Admin user, or Student for anyone.");
             }
 
-            UserRole creatorRole = UserRole.Student;
+            UserRole creatorRole;
 
-            if (userId.HasValue && userId > 0)
+            var userIdClaim = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int.TryParse(userIdClaim, out int userId);
+
+            if (userId > 0)
             {
-                creatorRole = await _userService.GetUserRole(userId.Value);
-            }
-            
-            if (creatorRole == UserRole.Admin)
-            {
-                inputRole = authUser.Role;
-            }
-            else if (creatorRole == UserRole.Teacher || creatorRole == UserRole.Student)
+                creatorRole = await _userService.GetUserRole(userId);
+
+                if (creatorRole == UserRole.Admin)
+                {
+                    inputRole = authUser.Role;
+                }
+                else if (creatorRole == UserRole.Teacher || creatorRole == UserRole.Student)
+                {
+                    inputRole = UserRole.Student;
+                }
+                else
+                {
+                    throw new UnauthorizedAccessException($"Only Admin users can assign {authUser.Role} role.");
+                }
+            } else
             {
                 inputRole = UserRole.Student;
-            }
-            else
-            {
-                throw new UnauthorizedAccessException($"Only Admin users can assign {authUser.Role} role.");
             }
 
             User userToBeSaved = new User

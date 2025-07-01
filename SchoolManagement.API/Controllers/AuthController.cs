@@ -34,9 +34,9 @@ namespace SchoolManagement.API.Controllers
         //}
 
         [HttpPost("Register")]
-        public async Task<ActionResult<UserDto>> Register([FromBody] Auth authUser, [FromQuery] int? userId)
+        public async Task<ActionResult<UserDto>> Register([FromBody] Auth authUser)
         {
-            return await _authService.RegisterAsync(authUser, userId);
+            return await _authService.RegisterAsync(authUser);
         }
 
         [HttpPost("Login")]

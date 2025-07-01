@@ -117,9 +117,9 @@ namespace SchoolManagement.API.Services
             };
         } 
 
-        public async Task<LoginResultDto> LoginAsync(string email, string password, int userId)
+        public async Task<LoginResultDto> LoginAsync(string email, string password)
         {
-            User registeredUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == email && u.Id == userId); ;
+            User registeredUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == email); ;
 
             if (registeredUser == null)
             {

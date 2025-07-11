@@ -80,12 +80,10 @@ namespace SchoolManagement.API.Services
 
         public async Task<UserRole> GetUserRole(int id)
         {
-            User user = await _context.Users
-                .Include(u => u.Teacher)
-                .Include(u => u.Student)
-                .FirstOrDefaultAsync(u => u.Id == id);
-
-            if (user == null) throw new KeyNotFoundException($"User with ID {id} not found");
+            if (id <= 0) throw new UnauthorizedAccessException("Invalid or missing user ID from authentication context.");
+            
+            User user = await _context.Users.FindAsync(id) ??
+                throw new KeyNotFoundException($"User with ID {id} not found");
 
             return user.Role;
         }

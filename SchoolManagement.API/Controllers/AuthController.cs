@@ -10,10 +10,9 @@ namespace SchoolManagement.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AuthController(IAuthService authService, IUserService userService) : ControllerBase
+    public class AuthController(IAuthService authService) : ControllerBase
     {
         private readonly IAuthService _authService = authService;
-        private readonly IUserService _userService = userService;
 
         //[HttpPost("Authenticate")]
         //public async Task<ActionResult<string>> Authenticate([FromBody] AuthReq req)
@@ -36,7 +35,11 @@ namespace SchoolManagement.API.Controllers
         [HttpPost("Register")]
         public async Task<ActionResult<UserDto>> Register([FromBody] Auth authUser)
         {
-            return await _authService.RegisterAsync(authUser);
+            Console.WriteLine($"[REGISTER] Petición recibida con email: {authUser.Email}");
+
+            UserDto registeredUser = await _authService.RegisterAsync(authUser);
+            return Ok(registeredUser);
+
         }
 
         [HttpPost("Login")]
@@ -57,7 +60,7 @@ namespace SchoolManagement.API.Controllers
             return Ok(new AuthDto(loginResult.Email, loginResult.Role));
         }
 
-        [HttpPost("LogOut")]
+        [HttpPost("Logout")]
         public IActionResult LogOut()
         {
             Response.Cookies.Delete("AuthToken");

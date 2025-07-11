@@ -64,64 +64,72 @@ namespace SchoolManagement.API.Services
        
         public async Task<UserDto> RegisterAsync (Auth authUser)
         {
-            bool existingUser = await _context.Users.AnyAsync(u => u.Email == authUser.Email);
-
-            if(existingUser)
+            try
             {
-                throw new ArgumentException("User with this email already exists.");
-            }
+                Console.WriteLine($"[REGISTER] Petición recibida con email: {authUser?.Email}, role: {authUser?.RoleName}");
 
-            var hashedPassword = _passwordHasher.HashPassword(null, authUser.Password);
+                bool existingUser = await _context.Users.AnyAsync(u => u.Email == authUser.Email);
 
-            if (!Enum.TryParse(authUser.Role.ToString(), true, out UserRole inputRole))
-            {
-                throw new ArgumentException($"Invalid role '{authUser.Role}'." +
-                    $" Allowed roles are: Admin and Teacher for an Admin user, or Student for anyone.");
-            }
-
-            UserRole creatorRole;
-
-            var userIdClaim = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            int.TryParse(userIdClaim, out int userId);
-
-            if (userId > 0)
-            {
-                creatorRole = await _userService.GetUserRole(userId);
-
-                if (creatorRole == UserRole.Admin)
+                if (existingUser)
                 {
-                    inputRole = authUser.Role;
+                    throw new ArgumentException("User with this email already exists.");
                 }
-                else if (creatorRole == UserRole.Teacher || creatorRole == UserRole.Student)
+                Console.WriteLine("[DEBUG] Antes de password hashing");
+
+                var hashedPassword = _passwordHasher.HashPassword(new User(), authUser.Password);
+                Console.WriteLine("[DEBUG] Antes de tryparse");
+
+                if (!Enum.TryParse(authUser.RoleName, true, out UserRole parsedRole))
+                {
+                    throw new ArgumentException($"Invalid role '{authUser.RoleName}'." +
+                        $" Allowed roles are: Admin and Teacher for an Admin user, or Student for anyone.");
+                }
+
+                int creatorId = 0;
+                UserRole inputRole = UserRole.Student;
+
+                if (_httpContextAccessor?.HttpContext.User?.Identity?.IsAuthenticated == true)
+                {
+                    Console.WriteLine("[DEBUG] Antes de CLAIM");
+
+                    var creatorIdClaim = _httpContextAccessor.HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                    if (int.TryParse(creatorIdClaim, out creatorId) && creatorId > 0)
+                    {
+                        Console.WriteLine($"[DEBUG] creatorId: {creatorId}");
+
+                        var creatorRole = await _userService.GetUserRole(creatorId);
+                        inputRole = creatorRole == UserRole.Admin ? parsedRole : UserRole.Student;
+                    }
+                } else
                 {
                     inputRole = UserRole.Student;
                 }
-                else
+                    Console.WriteLine($"[REGISTER ATTEMPT] Creator ID: {creatorId}, Assigned Role: {inputRole}");
+
+                User userToBeSaved = new User
                 {
-                    throw new UnauthorizedAccessException($"Only Admin users can assign {authUser.Role} role.");
-                }
-            } else
-            {
-                inputRole = UserRole.Student;
+                    Email = authUser.Email,
+                    Password = hashedPassword,
+                    Role = inputRole
+                };
+
+                _context.Users.Add(userToBeSaved);
+                await _context.SaveChangesAsync();
+
+                return new UserDto
+                {
+                    Id = userToBeSaved.Id,
+                    Email = userToBeSaved.Email,
+                    Role = userToBeSaved.Role
+                };
             }
-
-            User userToBeSaved = new User
+            catch (Exception ex)
             {
-                Id = authUser.Id,
-                Email = authUser.Email,
-                Password = hashedPassword,
-                Role = inputRole
-            };
-
-            _context.Users.Add(userToBeSaved);
-            await _context.SaveChangesAsync();
-
-            return new UserDto
-            {
-                Id = userToBeSaved.Id,
-                Email = userToBeSaved.Email,
-                Role = userToBeSaved.Role
-            };
+                Console.WriteLine($"[REGISTER ERROR] {ex.Message}");
+                Console.WriteLine($"[STACK TRACE] {ex.StackTrace}");
+                throw;
+            }
         } 
 
         public async Task<LoginResultDto> LoginAsync(string email, string password)

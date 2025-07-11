@@ -1,12 +1,14 @@
-﻿using static SchoolManagement.API.Models.User;
+﻿using System.Text.Json.Serialization;
 
 namespace SchoolManagement.API.Models
 {
     public class Auth
     {
-        public int Id { get; set; }
+        [JsonPropertyName("email")]
         public string Email { get; set; }
+        [JsonPropertyName("password")]
         public string Password { get; set; }
-        public UserRole Role { get; set; }
+        [JsonPropertyName("roleName")]
+        public string RoleName { get; set; }
     }
 }

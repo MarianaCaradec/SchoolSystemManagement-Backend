@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using SchoolManagement.API.DTOs;
 using SchoolManagement.API.Interfaces;
 using SchoolManagement.API.Models;
@@ -15,9 +16,9 @@ namespace SchoolManagement.API.Controllers
 
         // GET: api/<StudentController>
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<StudentResponseDto>>> GetAllStudents(int userId)
+        public async Task<ActionResult<IEnumerable<StudentResponseDto>>> GetAllStudents()
         {
-            IEnumerable<StudentResponseDto> students = await _studentService.GetStudentsAsync(userId);
+            IEnumerable<StudentResponseDto> students = await _studentService.GetStudentsAsync();
 
             if (students == null || !students.Any()) return NoContent();
 
@@ -26,36 +27,37 @@ namespace SchoolManagement.API.Controllers
 
         // GET api/<StudentController>/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<StudentResponseDto>> GetStudent(int id, int userId)
+        public async Task<ActionResult<StudentResponseDto>> GetStudent(int id)
         {
-            StudentResponseDto student = await _studentService.GetStudentByIdAsync(id, userId);
+            StudentResponseDto student = await _studentService.GetStudentByIdAsync(id);
 
             return Ok(student);
         }
 
         // POST api/<StudentController>
+        [Authorize]
         [HttpPost]
-        public async Task<ActionResult<StudentInputDto>> PostStudent(StudentInputDto studentToBeCreated, int userId)
+        public async Task<ActionResult<StudentInputDto>> PostStudent(StudentInputDto studentToBeCreated)
         {
-            StudentInputDto createdStudent = await _studentService.CreateStudentAsync(studentToBeCreated, userId);
+            StudentInputDto createdStudent = await _studentService.CreateStudentAsync(studentToBeCreated);
 
             return CreatedAtAction("GetStudent", new { id = createdStudent.Id }, createdStudent);
         }
 
         // PUT api/<StudentController>/5
         [HttpPut("{id}")]
-        public async Task<ActionResult<StudentInputDto>> PutStudent(int id, StudentInputDto studentToBeUpdated, int userId)
+        public async Task<ActionResult<StudentInputDto>> PutStudent(int id, StudentInputDto studentToBeUpdated)
         {
-            StudentInputDto updatedStudent = await _studentService.UpdateStudentAsync(id, studentToBeUpdated, userId);
+            StudentInputDto updatedStudent = await _studentService.UpdateStudentAsync(id, studentToBeUpdated);
 
             return Ok(updatedStudent);
         }
 
         // DELETE api/<StudentController>/5
         [HttpDelete("{id}")]
-        public async Task<ActionResult<bool>> DeleteStudent(int id, int userId)
+        public async Task<ActionResult<bool>> DeleteStudent(int id)
         {
-            await _studentService.DeleteStudentAsync(id, userId);
+            await _studentService.DeleteStudentAsync(id);
             
             return NoContent();
         }

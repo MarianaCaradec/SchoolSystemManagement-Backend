@@ -3,17 +3,26 @@ using SchoolManagement.API.Data.Context;
 using SchoolManagement.API.DTOs;
 using SchoolManagement.API.Interfaces;
 using SchoolManagement.API.Models;
+using System.Security.Claims;
 using static SchoolManagement.API.Models.User;
 
 namespace SchoolManagement.API.Services
 {
-    public class StudentService(SchoolSysDBContext context, IUserService userService) : IStudentService
+    public class StudentService(SchoolSysDBContext context, IUserService userService, IHttpContextAccessor httpContextAccessor) : IStudentService
     {
         private readonly SchoolSysDBContext _context = context;
         private readonly IUserService _userService = userService;
+        private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
 
-        public async Task<IEnumerable<StudentResponseDto>> GetStudentsAsync(int userId)
+        public async Task<IEnumerable<StudentResponseDto>> GetStudentsAsync()
         {
+            var userIdClaim = _httpContextAccessor.HttpContext.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if(!int.TryParse(userIdClaim, out int userId) || userId <= 0)
+            {
+                throw new UnauthorizedAccessException("Invalid or missing user ID from authentication context.");
+            }
+
             UserRole userRole = await _userService.GetUserRole(userId);
 
             IQueryable<Student> query = _context.Students.Include(s => s.User);
@@ -29,78 +38,100 @@ namespace SchoolManagement.API.Services
             }).ToListAsync();
         }
 
-        public async Task<StudentResponseDto> GetStudentByIdAsync(int id, int userId)
+        public async Task<StudentResponseDto> GetStudentByIdAsync(int id)
         {
-            UserRole userRole = await _userService.GetUserRole(userId);
-
-            Student student = await _context.Students
-                .Include(st => st.User)
-                .Include(st => st.Class)
-                .ThenInclude(c => c.Teachers)
-                .Include(st => st.Attendances)
-                .Include(st => st.Grades)
-                .ThenInclude(g => g.Subject)
-                .FirstOrDefaultAsync(st => st.Id == id);
-
-            if (student == null) throw new KeyNotFoundException($"Student with ID {id} not found.");
-
-            if (userRole == UserRole.Teacher && !student.Class.Teachers.Any(t => t.UserId == userId))
             {
-                throw new UnauthorizedAccessException("You are not authorized to access this student.");
-            }
-            
-            if(userRole == UserRole.Student && student.UserId != userId)
-            {
-                throw new UnauthorizedAccessException("You are not authorized to access this student.");
-            }
+                var userIdClaim = _httpContextAccessor.HttpContext.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            return new StudentResponseDto
-            {
-                Id = userRole != UserRole.Student ? student.Id : 0,
-                Name = student.Name,
-                Surname = student.Surname,
-                BirthDate = student.BirthDate,
-                Address = student.Address,
-                MobileNumber = student.MobileNumber,
-                EmailRole = new AuthDto(student.User.Email, student.User.Role),
-                Class = new ClassStudentDto 
-                { 
-                    Course = student.Class.Course, 
-                    Divition = student.Class.Divition, 
-                    Teachers = student.Class.Teachers.Select(t => new TeacherResponseDto
+                if (!int.TryParse(userIdClaim, out int userId) || userId <= 0)
+                {
+                    throw new UnauthorizedAccessException("Invalid or missing user ID from authentication context.");
+                }
+                UserRole userRole = await _userService.GetUserRole(userId);
+
+                Student student = await _context.Students
+                    .Include(st => st.User)
+                    .Include(st => st.Class)
+                    .ThenInclude(c => c.Teachers)
+                    .Include(st => st.Attendances)
+                    .Include(st => st.Grades)
+                    .ThenInclude(g => g.Subject)
+                    .FirstOrDefaultAsync(st => st.Id == id);
+
+                if (student == null) throw new KeyNotFoundException($"Student with ID {id} not found.");
+
+                if (userRole == UserRole.Teacher && !student.Class.Teachers.Any(t => t.UserId == userId))
+                {
+                    throw new UnauthorizedAccessException("You are not authorized to access this student.");
+                }
+
+                if (userRole == UserRole.Student && student.UserId != userId)
+                {
+                    throw new UnauthorizedAccessException("You are not authorized to access this student.");
+                }
+
+                return new StudentResponseDto
+                {
+                    Id = userRole != UserRole.Student ? student.Id : 0,
+                    Name = student.Name,
+                    Surname = student.Surname,
+                    BirthDate = student.BirthDate,
+                    Address = student.Address,
+                    MobileNumber = student.MobileNumber,
+                    EmailRole = new AuthDto(student.User.Id, student.User.Email, student.User.Role),
+                    Class = new ClassStudentDto
                     {
-                        Name = t.Name,
-                        Surname = t.Surname,
-                        MobileNumber = userRole != UserRole.Student ? t.MobileNumber : 0,
-                        Address = userRole != UserRole.Student ? t.Address : "-",
-                        UserId = userRole != UserRole.Student ? t.UserId : 0,
-                    }).ToList()
+                        Course = student.Class.Course,
+                        Divition = student.Class.Divition,
+                        Teachers = student.Class.Teachers.Select(t => new TeacherResponseDto
+                        {
+                            Name = t.Name,
+                            Surname = t.Surname,
+                            MobileNumber = userRole != UserRole.Student ? t.MobileNumber : 0,
+                            Address = userRole != UserRole.Student ? t.Address : "-",
+                            UserId = userRole != UserRole.Student ? t.UserId : 0,
+                        }).ToList()
                     },
-                Attendances = student.Attendances.Select(a => new AttendanceDto
-                {
-                    Date = a.Date,
-                    Present = a.Present,
-                })
-                .ToList(),
-                Grades = student.Grades.Select(g => new GradeDto
-                {
-                    Value = g.Value,
-                    Date = g.Date,
-                    SubjectId = g.SubjectId,
-                    SubjectName = g.Subject.Title,
-                })
-                .ToList(),
-            };
+                    Attendances = student.Attendances.Select(a => new AttendanceDto
+                    {
+                        Date = a.Date,
+                        Present = a.Present,
+                    })
+                    .ToList(),
+                    Grades = student.Grades.Select(g => new GradeDto
+                    {
+                        Value = g.Value,
+                        Date = g.Date,
+                        SubjectId = g.SubjectId,
+                        SubjectName = g.Subject.Title,
+                    })
+                    .ToList(),
+                };
+            }
         }
 
-        public async Task<StudentInputDto> CreateStudentAsync(StudentInputDto studentToBeCreated, int userId)
+        public async Task<StudentInputDto> CreateStudentAsync(StudentInputDto studentToBeCreated)
         {
-            UserRole userRole = await _userService.GetUserRole(userId);
+            var roleClaim = _httpContextAccessor.HttpContext.User.FindFirst(ClaimTypes.Role)?.Value;
 
-            if(userRole != UserRole.Admin)
+            if (!Enum.TryParse(roleClaim, out UserRole userRole))
+            {
+                throw new UnauthorizedAccessException("Invalid role claim.");
+            }
+
+            if (userRole != UserRole.Admin && userRole != UserRole.Student)
             {
                 throw new UnauthorizedAccessException("You are not authorized to do this action.");
             }
+
+            var userIdClaim = _httpContextAccessor.HttpContext.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!int.TryParse(userIdClaim, out int userId) || userId <= 0)
+            {
+                throw new UnauthorizedAccessException("Invalid or missing user ID from authentication context.");
+            }
+
+            studentToBeCreated.UserId = userId;
 
             Student createdStudentToBeSaved = new Student
             {
@@ -129,8 +160,15 @@ namespace SchoolManagement.API.Services
             };
         }
 
-        public async Task<StudentInputDto> UpdateStudentAsync(int id, StudentInputDto studentToBeUpdated, int userId)
+        public async Task<StudentInputDto> UpdateStudentAsync(int id, StudentInputDto studentToBeUpdated)
         {
+            var userIdClaim = _httpContextAccessor.HttpContext.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!int.TryParse(userIdClaim, out int userId) || userId <= 0)
+            {
+                throw new UnauthorizedAccessException("Invalid or missing user ID from authentication context.");
+            }
+
             UserRole userRole = await _userService.GetUserRole(userId);
 
             if(userRole == UserRole.Teacher)
@@ -182,8 +220,15 @@ namespace SchoolManagement.API.Services
             };
         }
 
-        public async Task<bool> DeleteStudentAsync(int id, int userId)
+        public async Task<bool> DeleteStudentAsync(int id)
         {
+            var userIdClaim = _httpContextAccessor.HttpContext.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!int.TryParse(userIdClaim, out int userId) || userId <= 0)
+            {
+                throw new UnauthorizedAccessException("Invalid or missing user ID from authentication context.");
+            }
+
             UserRole userRole = await _userService.GetUserRole(userId);
 
             if(userRole != UserRole.Admin)

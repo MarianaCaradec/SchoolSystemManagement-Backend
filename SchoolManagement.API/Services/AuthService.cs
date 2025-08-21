@@ -23,8 +23,11 @@ namespace SchoolManagement.API.Services
 
         public async Task<string> GenerateTokenAsync(User user)
         {
-            var jwtSecret = _configuration.GetSection("JwtSecret");
-            var key = Encoding.UTF8.GetBytes(jwtSecret["SecretKey"]);
+            if (user == null)
+                throw new ArgumentNullException(nameof(user), "User cannot be null when generating token.");
+
+            var secretKey = _configuration["JwtSecret:SecretKey"];
+            var key = Encoding.UTF8.GetBytes(secretKey);
 
             var claims = new[]
             {
@@ -38,9 +41,9 @@ namespace SchoolManagement.API.Services
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddMinutes(Convert.ToDouble(jwtSecret["ExpirationInMinutes"])),
-                Issuer = jwtSecret["Issuer"],
-                Audience = jwtSecret["Audience"],
+                Expires = DateTime.UtcNow.AddMinutes(Convert.ToDouble(_configuration["JwtSecret:ExpirationInMinutes"])),
+                Issuer = _configuration["JwtSecret:Issuer"],
+                Audience = _configuration["JwtSecret:Audience"],
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
 
@@ -49,87 +52,58 @@ namespace SchoolManagement.API.Services
 
             return tokenHandler.WriteToken(token);
         }
-
-        //public async Task<string> AuthenticateAsync(string email, string password, int userId)
-        //{
-        //    User user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email && u.Id == userId);
-
-        //    if (user == null ||_passwordHasher.VerifyHashedPassword(user, user.Password, password) != PasswordVerificationResult.Success)
-        //    {
-        //        throw new UnauthorizedAccessException("Invalid credentials.");
-        //    }
-
-        //    return await GenerateTokenAsync(user);
-        //}
        
         public async Task<UserDto> RegisterAsync (Auth authUser)
         {
-            try
+            bool existingUser = await _context.Users.AnyAsync(u => u.Email == authUser.Email);
+
+            if (existingUser)
             {
-                Console.WriteLine($"[REGISTER] Petición recibida con email: {authUser?.Email}, role: {authUser?.RoleName}");
-
-                bool existingUser = await _context.Users.AnyAsync(u => u.Email == authUser.Email);
-
-                if (existingUser)
-                {
-                    throw new ArgumentException("User with this email already exists.");
-                }
-                Console.WriteLine("[DEBUG] Antes de password hashing");
-
-                var hashedPassword = _passwordHasher.HashPassword(new User(), authUser.Password);
-                Console.WriteLine("[DEBUG] Antes de tryparse");
-
-                if (!Enum.TryParse(authUser.RoleName, true, out UserRole parsedRole))
-                {
-                    throw new ArgumentException($"Invalid role '{authUser.RoleName}'." +
-                        $" Allowed roles are: Admin and Teacher for an Admin user, or Student for anyone.");
-                }
-
-                int creatorId = 0;
-                UserRole inputRole = UserRole.Student;
-
-                if (_httpContextAccessor?.HttpContext.User?.Identity?.IsAuthenticated == true)
-                {
-                    Console.WriteLine("[DEBUG] Antes de CLAIM");
-
-                    var creatorIdClaim = _httpContextAccessor.HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                    if (int.TryParse(creatorIdClaim, out creatorId) && creatorId > 0)
-                    {
-                        Console.WriteLine($"[DEBUG] creatorId: {creatorId}");
-
-                        var creatorRole = await _userService.GetUserRole(creatorId);
-                        inputRole = creatorRole == UserRole.Admin ? parsedRole : UserRole.Student;
-                    }
-                } else
-                {
-                    inputRole = UserRole.Student;
-                }
-                    Console.WriteLine($"[REGISTER ATTEMPT] Creator ID: {creatorId}, Assigned Role: {inputRole}");
-
-                User userToBeSaved = new User
-                {
-                    Email = authUser.Email,
-                    Password = hashedPassword,
-                    Role = inputRole
-                };
-
-                _context.Users.Add(userToBeSaved);
-                await _context.SaveChangesAsync();
-
-                return new UserDto
-                {
-                    Id = userToBeSaved.Id,
-                    Email = userToBeSaved.Email,
-                    Role = userToBeSaved.Role
-                };
+                throw new ArgumentException("User with this email already exists.");
             }
-            catch (Exception ex)
+
+            var hashedPassword = _passwordHasher.HashPassword(new User(), authUser.Password);
+
+            if (!Enum.TryParse(authUser.RoleName, true, out UserRole parsedRole))
             {
-                Console.WriteLine($"[REGISTER ERROR] {ex.Message}");
-                Console.WriteLine($"[STACK TRACE] {ex.StackTrace}");
-                throw;
+                throw new ArgumentException($"Invalid role '{authUser.RoleName}'." +
+                    $" Allowed roles are: Admin and Teacher for an Admin user, or Student for anyone.");
             }
+
+            int creatorId = 0;
+            UserRole inputRole = UserRole.Student;
+
+            if (_httpContextAccessor.HttpContext?.User.Identity?.IsAuthenticated == true)
+            {
+                var creatorIdClaim = _httpContextAccessor.HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (int.TryParse(creatorIdClaim, out creatorId) && creatorId > 0)
+                {
+                    var creatorRole = await _userService.GetUserRole(creatorId);
+                    inputRole = creatorRole == UserRole.Admin ? parsedRole : UserRole.Student;
+                }
+            }
+            else
+            {
+                inputRole = UserRole.Student;
+            }
+
+            User userToBeSaved = new User
+            {
+                Email = authUser.Email,
+                Password = hashedPassword,
+                Role = inputRole
+            };
+
+            _context.Users.Add(userToBeSaved);
+            await _context.SaveChangesAsync();
+
+            return new UserDto
+            {
+                Id = userToBeSaved.Id,
+                Email = userToBeSaved.Email,
+                Role = userToBeSaved.Role
+            };
         } 
 
         public async Task<LoginResultDto> LoginAsync(string email, string password)
@@ -138,14 +112,14 @@ namespace SchoolManagement.API.Services
 
             if (registeredUser == null)
             {
-                throw new UnauthorizedAccessException("Invalid email or password.");
+                throw new UnauthorizedAccessException("Invalid email");
             }
 
             var verifiedPassword = _passwordHasher.VerifyHashedPassword(registeredUser, registeredUser.Password, password);
 
             if (verifiedPassword != PasswordVerificationResult.Success)
             {
-                throw new UnauthorizedAccessException("Invalid email or password.");
+                throw new UnauthorizedAccessException("Invalid password.");
             }
 
             string token = await GenerateTokenAsync(registeredUser);
@@ -154,9 +128,31 @@ namespace SchoolManagement.API.Services
 
             return new LoginResultDto
             {
+                Id = registeredUser.Id,
                 Email = registeredUser.Email,
                 Role = userRole,
                 Token = token
+            };
+        }
+
+        public async Task<UserDto> GetCurrentUserAsync()    
+        {
+            
+            var userIdClaim = _httpContextAccessor.HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
+            if (userIdClaim == null) throw new UnauthorizedAccessException("Invalid user id");
+
+            if (!int.TryParse(userIdClaim, out int userId)) throw new UnauthorizedAccessException("Invalid user id");
+
+            var user = await _context.Users.FindAsync(userId);
+
+            if (user == null) throw new KeyNotFoundException("Authenticated user not found");
+
+            return new UserDto
+            {
+                Id = user.Id,
+                Email = user.Email,
+                Role = user.Role
             };
         }
     }

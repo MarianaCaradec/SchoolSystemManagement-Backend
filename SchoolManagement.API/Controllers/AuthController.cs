@@ -1,8 +1,11 @@
-﻿using Microsoft.AspNetCore.Identity.Data;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SchoolManagement.API.DTOs;
 using SchoolManagement.API.Interfaces;
 using SchoolManagement.API.Models;
+using System.Security.Claims;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -57,7 +60,22 @@ namespace SchoolManagement.API.Controllers
 
             Response.Cookies.Append("AuthToken", loginResult.Token, cookies);
 
-            return Ok(new AuthDto(loginResult.Email, loginResult.Role));
+            return Ok(new AuthDto(loginResult.Id, loginResult.Email, loginResult.Role));
+        }
+
+        [HttpGet("me")]
+        public async Task<ActionResult<UserDto>> GetCurrentUser()
+        {
+            try
+            {
+                UserDto authenticatedUser = await _authService.GetCurrentUserAsync();
+                return Ok(authenticatedUser);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GetCurrentUser: {ex.Message}");
+                return StatusCode(500, new { error = ex.Message });
+            }
         }
 
         [HttpPost("Logout")]

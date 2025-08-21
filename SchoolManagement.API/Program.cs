@@ -6,6 +6,7 @@ using SchoolManagement.API.Data.Context;
 using SchoolManagement.API.Interfaces;
 using SchoolManagement.API.Models;
 using SchoolManagement.API.Services;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -57,7 +58,8 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtSecret["Issuer"],
         ValidAudience = jwtSecret["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(key)
+        IssuerSigningKey = new SymmetricSecurityKey(key),
+        RoleClaimType = ClaimTypes.Role
     };
 });
 
@@ -83,8 +85,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseRouting();
-
-app.UseCors();
 
 app.Use(async (context, next) =>
 {

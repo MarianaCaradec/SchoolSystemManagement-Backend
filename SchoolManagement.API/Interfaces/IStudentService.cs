@@ -7,6 +7,7 @@ namespace SchoolManagement.API.Interfaces
     {
         Task<IEnumerable<StudentResponseDto>> GetStudentsAsync();
         Task<StudentResponseDto> GetStudentByIdAsync(int id);
+        Task<StudentInputDto> GetStudentByUserIdAsync(int userId);
         Task<StudentInputDto> CreateStudentAsync(StudentInputDto studentToBeCreated);
         Task<StudentInputDto> UpdateStudentAsync(int id, StudentInputDto studentToBeUpdated);
         Task<bool> DeleteStudentAsync(int id);

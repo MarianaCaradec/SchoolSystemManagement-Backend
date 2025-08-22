@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SchoolManagement.API.Data.Context;
 using SchoolManagement.API.DTOs;
 using SchoolManagement.API.Interfaces;
@@ -18,7 +19,7 @@ namespace SchoolManagement.API.Services
         {
             var userIdClaim = _httpContextAccessor.HttpContext.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            if(!int.TryParse(userIdClaim, out int userId) || userId <= 0)
+            if (!int.TryParse(userIdClaim, out int userId) || userId <= 0)
             {
                 throw new UnauthorizedAccessException("Invalid or missing user ID from authentication context.");
             }
@@ -108,6 +109,30 @@ namespace SchoolManagement.API.Services
                     .ToList(),
                 };
             }
+        }
+
+        public async Task<StudentInputDto> GetStudentByUserIdAsync(int userId)
+        {
+            var student = await _context.Students
+                .Include(st => st.User)
+                .Include(st => st.Class)
+                .FirstOrDefaultAsync(st => st.UserId == userId);
+
+            if (student == null) throw new KeyNotFoundException("Student not found by that user ID");
+
+            UserRole userRole = await _userService.GetUserRole(userId);
+
+            return new StudentInputDto
+            {
+                Id = userRole != UserRole.Student ? student.Id : 0,
+                Name = student.Name,
+                Surname = student.Surname,
+                BirthDate = student.BirthDate,
+                Address = student.Address,
+                MobileNumber = student.MobileNumber,
+                UserId = student.UserId,
+                ClassId = student.Class != null ? student.Class.Id : 0
+            };
         }
 
         public async Task<StudentInputDto> CreateStudentAsync(StudentInputDto studentToBeCreated)

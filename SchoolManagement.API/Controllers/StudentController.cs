@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Identity.Client;
 using SchoolManagement.API.DTOs;
 using SchoolManagement.API.Interfaces;
 using SchoolManagement.API.Models;
@@ -32,6 +34,14 @@ namespace SchoolManagement.API.Controllers
             StudentResponseDto student = await _studentService.GetStudentByIdAsync(id);
 
             return Ok(student);
+        }
+
+        [HttpGet("by-user/{userId}")]
+        public async Task<ActionResult<StudentInputDto>> GetStudentByUserId(int userId)
+        {
+            StudentInputDto studentByUserId = await _studentService.GetStudentByUserIdAsync(userId);
+
+            return Ok(studentByUserId);
         }
 
         // POST api/<StudentController>

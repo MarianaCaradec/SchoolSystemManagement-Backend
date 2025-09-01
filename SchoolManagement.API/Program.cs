@@ -24,7 +24,6 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
@@ -37,6 +36,8 @@ builder.Services.AddScoped<ISubjectService, SubjectService>();
 
 builder.Services.AddDbContext<SchoolSysDBContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("SchoolSysDBConnection")));
+
+builder.Services.AddHttpContextAccessor();
 
 var jwtSecret = builder.Configuration.GetSection("JwtSecret");
 var key = Encoding.UTF8.GetBytes(jwtSecret["SecretKey"]);

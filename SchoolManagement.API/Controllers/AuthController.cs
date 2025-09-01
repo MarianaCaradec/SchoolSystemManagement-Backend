@@ -17,24 +17,6 @@ namespace SchoolManagement.API.Controllers
     {
         private readonly IAuthService _authService = authService;
 
-        //[HttpPost("Authenticate")]
-        //public async Task<ActionResult<string>> Authenticate([FromBody] AuthReq req)
-        //{
-        //    string token = await _authService.AuthenticateAsync(req.Email, req.Password, req.UserId);
-
-        //    var cookies = new CookieOptions
-        //    {
-        //        HttpOnly = true,
-        //        Secure = true,
-        //        SameSite = SameSiteMode.Strict,
-        //        Expires = DateTime.UtcNow.AddMinutes(60)
-        //    };
-
-        //    Response.Cookies.Append("AuthToken", token, cookies);
-
-        //    return Ok(new { Message = "Authentication successful" });
-        //}
-
         [HttpPost("Register")]
         public async Task<ActionResult<UserDto>> Register([FromBody] Auth authUser)
         {

@@ -69,15 +69,16 @@ namespace SchoolManagement.API.Services
                 throw new ArgumentException($"Invalid role '{authUser.RoleName}'." +
                     $" Allowed roles are: Admin and Teacher for an Admin user, or Student for anyone.");
             }
-
-            int creatorId = 0;
+            
             UserRole inputRole = UserRole.Student;
 
-            if (_httpContextAccessor.HttpContext?.User.Identity?.IsAuthenticated == true)
-            {
-                var creatorIdClaim = _httpContextAccessor.HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var user = _httpContextAccessor.HttpContext?.User;
 
-                if (int.TryParse(creatorIdClaim, out creatorId) && creatorId > 0)
+            if (user != null && user.Identity?.IsAuthenticated == true)
+            {
+                var creatorIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (int.TryParse(creatorIdClaim, out int creatorId) && creatorId > 0)
                 {
                     var creatorRole = await _userService.GetUserRole(creatorId);
                     inputRole = creatorRole == UserRole.Admin ? parsedRole : UserRole.Student;
@@ -87,6 +88,7 @@ namespace SchoolManagement.API.Services
             {
                 inputRole = UserRole.Student;
             }
+
 
             User userToBeSaved = new User
             {

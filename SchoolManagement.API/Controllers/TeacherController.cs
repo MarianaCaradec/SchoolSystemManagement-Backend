@@ -34,6 +34,14 @@ namespace SchoolManagement.API.Controllers
             return Ok(teacher);
         }
 
+        [HttpGet("by-user/{userId}")]
+        public async Task<ActionResult<TeacherInputDto>> GetTeacherByUserId(int userId)
+        {
+            TeacherInputDto teacher = await _teacherService.GetTeacherByUserIdAsync(userId);
+
+            return Ok(teacher);
+        }
+
         // POST api/<ValuesController>
         [HttpPost]
         public async Task<ActionResult<TeacherInputDto>> PostTeacher(TeacherInputDto teacherToBeCreated, int userId)

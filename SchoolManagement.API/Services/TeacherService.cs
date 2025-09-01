@@ -129,6 +129,28 @@ namespace SchoolManagement.API.Services
             return teacher;
         }
 
+        public async Task<TeacherInputDto> GetTeacherByUserIdAsync(int userId)
+        {
+            var teacher = await _context.Teachers
+                .Include(st => st.User)
+                .FirstOrDefaultAsync(t => t.UserId == userId);
+
+            if (teacher == null) throw new KeyNotFoundException("Teacher not found by that user ID");
+
+            UserRole userRole = await _userService.GetUserRole(userId);
+
+            return new TeacherInputDto
+            {
+                Id = userRole != UserRole.Teacher ? teacher.Id : 0,
+                Name = teacher.Name,
+                Surname = teacher.Surname,
+                BirthDate = teacher.BirthDate,
+                Address = teacher.Address,
+                MobileNumber = teacher.MobileNumber,
+                UserId = teacher.UserId,
+            };
+        }
+
         public async Task<TeacherInputDto> CreateTeacherAsync(TeacherInputDto teacherToBeCreated, int userId)
         {
             UserRole userRole = await _userService.GetUserRole(userId);
